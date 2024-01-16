@@ -1,0 +1,244 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+</head>
+
+<style>
+    body {
+       background: repeating-linear-gradient(319deg, #000000d6, transparent 25px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    table {
+        background-color: black;
+    border-radius: 7px;
+    padding: 2rem;
+    height: 18vh;
+    border-spacing: 20px;
+    border-top-left-radius: 77px;
+    border-bottom-right-radius: 82px;
+    /* animation: tableAnimation 3s infinite linear; */
+    }    
+    input{
+        height: 3rem;
+    width: 17rem;
+    border-radius: 2rem;
+    font-size: 2rem;
+    border: none;
+    padding-left: 1rem;
+    -webkit-box-shadow: 9px 5px 38px -6px rgba(207,207,207,1);
+-moz-box-shadow: 9px 5px 38px -6px rgba(207,207,207,1);
+box-shadow: 9px 5px 38px -6px rgba(207,207,207,1);
+background-color: #9d9999;
+position: relative;
+    }  
+    button{
+    background-color:black;
+        color: white;
+        font-size: 2rem;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        text-align: center;
+        border-radius: 15px;
+        border: 1px solid white;
+    }.X{
+        padding-left: 1.2rem;
+        padding-right: 1.2rem;
+    }.minus{
+        padding-right: 1.5rem;
+        padding-left: 1.5rem;
+        
+    }.equal{
+        padding-right: 1rem;
+        padding-left: 1rem;
+        
+    }.point{
+        padding-left: 1.3rem;
+        padding-right: 1.3rem;
+
+    }h1{
+        display: flex;
+        justify-content: flex-end;
+        position: relative;
+        bottom: 2rem;
+        animation: ChangeColor 3s infinite linear;
+
+    }@keyframes ChangeColor{
+        0%{color: red;}20%{color: blue;}40%{ color: green;}60%{ color: pink }80%{color: teal;}100%{color: white;}
+    }
+    .plus{
+        padding-left: 1.3rem;
+    padding-right: 1.3rem;
+    }.devide{
+        padding-left: 22px;
+    padding-right: 22px;
+    }
+    .cover{
+        border-radius: 7px;
+        background: black;
+    height: 37.2rem;
+    position: absolute;
+    width: 391px;
+    border-top-left-radius: 77px;
+    border-bottom-right-radius: 82px;
+    transform-style: preserve-3d;
+    transform-origin: left;
+    transition:1s ;
+    animation: moveBorder 3s infinite linear;
+    }
+    @keyframes moveBorder {0% {box-shadow: 0 0 0 2px blue;}20% {box-shadow: 0 0 0 2px red;}40% {box-shadow: 0 0 0 2px green;}60% {box-shadow: 0 0 0 2px orange;}80% {box-shadow: 0 0 0 2px pink;}100% {box-shadow: 0 0 0 2px purple;}}
+    .open{
+        background-color: darkgray;
+        transform: rotateY(-120deg);
+    }    marquee {
+        color:whitesmoke;
+        font-size: 1.5rem;
+        overflow: hidden;
+        position: relative;
+        top: 70px;
+
+        white-space: nowrap;
+    }
+    .circle{
+        position: relative;
+    height: 200px;
+    width: 200px;
+    border: 2px solid white;
+    border-radius: 50%;
+    left: 71px;
+    top: 100px;
+    }
+    .stick{
+        background: blue;
+    width: 3px;
+    height: 98px;
+    position: absolute;
+    animation: rotates 60s infinite linear;
+    transform-origin: bottom center;
+    transform-origin: 50% 100%;
+    left: 50%;
+    bottom: 50%;
+    }
+    @keyframes rotates {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+</style>
+
+<body>
+
+
+<div>
+
+    <button class="cover" id="opens"  onclick="covers()">
+        <marquee id="date"></marquee>
+    </p>
+    
+    <div class="circle" >
+        <div class="stick"></div>
+    </div>
+    
+    </button>
+
+    <table>
+        <tr  >
+            <th colspan="4" ><h1>Saud</h1> <input type="text" id="result"> </th>
+        </tr>
+
+        <!-- row2 -->
+        <tr >
+            <td colspan="" ><button onclick="resultConcatnate('C')" style="background-color: red;" ><small>C</small></button></td>
+            <td><button onclick="resultConcatnate('cls')" style="background-color:blueviolet; color: white;"  ><small><i>X</i></small></button></td>
+            <td><button onclick="resultConcatnate('sqrt')" class="sqrt">√</button></td>
+ 
+            <td><button onclick="resultConcatnate('/')" class="devide" >/</button></td>
+
+        </tr>
+        <!-- row3 -->
+        <tr>
+            <td rowspan="" ><button onclick="resultConcatnate('7')">7</button></td>
+            <td><button onclick="resultConcatnate('8')">8</button></td>
+            <td><button onclick="resultConcatnate('9')">9</button></td>
+            <td><button onclick="resultConcatnate('%')">%</button></td>
+        </tr>
+        <!-- row4 -->
+        <tr>
+            <td><button onclick="resultConcatnate('4')">4</button></td>
+            <td><button onclick="resultConcatnate('5')">5</button></td>
+            <td><button onclick="resultConcatnate('6')">6</button></td>
+            <td><button onclick="resultConcatnate('*') " class="X" ><small>X</small></button></td>
+        </tr>
+        <!-- row5 -->
+        <tr>
+            <td><button onclick="resultConcatnate('1')">1</button></td>
+            <td><button onclick="resultConcatnate('2')">2</button></td>
+            <td><button onclick="resultConcatnate('3')">3</button></td>
+            <td><button onclick="resultConcatnate('-')" class="minus" >-</button></td>
+        </tr>
+        <!-- row6 -->
+        <tr>
+            <td><button onclick="resultConcatnate('0')">0</button></td>
+            <td><button onclick="resultConcatnate('.')" class="point" >.</button></td>
+            <td><button onclick="calculateResult()" class="equal" >=</button></td>
+            
+            
+            <td><button onclick="resultConcatnate('+')" class="plus" >+</button></td>
+            
+        </tr>
+    </table>
+
+    <script>
+        var cover=document.getElementById('opens')
+       
+        function resultConcatnate(value) {
+            var resultInput = document.getElementById('result');
+        if (value === 'C') {
+            resultInput.value = '';
+            cover.classList.remove("open")
+            document.getElementById("result").style.background="#9d9999"
+        }
+        else if (value === 'sqrt') {
+        resultInput.value = Math.sqrt(eval(resultInput.value));
+    }
+        
+        else if(value=="cls"){
+            resultInput.value = resultInput.value.slice(0, -1);
+        }
+        
+        
+        else {
+            resultInput.value += value;
+        }
+        }
+        function covers() {
+                var cover = document.getElementById('opens');
+                cover.classList.toggle('open');
+                document.getElementById("result").style.background="white"
+            }
+
+        function calculateResult() {
+            var result = eval(document.getElementById('result').value);
+            document.getElementById('result').value = result;
+        }
+        function date(){
+            document.getElementById("date").innerHTML = Date();
+       
+        }
+        setInterval(date(),1000)
+    </script>
+
+
+</div>
+</body>
+</html>

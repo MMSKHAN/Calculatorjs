@@ -1,0 +1,108 @@
+ // SPDX-License-Identifier: MIT
+
+pragma solidity >=0.8.2 <0.9.0;
+// Entity creation
+contract EntityContract {
+    enum EntityType { Farmer, Wholesaler, Logistics, Retailer, Customer }
+    address public owner;
+     uint private _id;
+    
+    struct Entity {
+        address Firmadd;
+        string Firmname;
+        string Firmlocation;
+        string ownerName;
+        string ownerContact;
+        string city;
+        EntityType entityType;
+        bool isAllowed;
+    }
+
+    Entity[] public entities;
+ mapping(address => bool) private entityExists;
+    mapping(address => bool) private entityAllowed;
+ mapping(address => EntityType) private entityTypes;
+    constructor() {
+        owner = msg.sender;
+         _id = 1;
+    }
+
+    function setEntity(address _Firmadd,string memory _Firmname,string memory _Firmlocation,string memory _ownerName,string memory _ownerContact,string memory _city,EntityType _entityType) public {
+        require(msg.sender == owner, "Only owner can create entities");
+         require(!entityExists[_Firmadd], "Entity is already exists");
+        entities.push(Entity({Firmadd: _Firmadd,Firmname: _Firmname,Firmlocation: _Firmlocation,ownerName: _ownerName,ownerContact: _ownerContact,city: _city,entityType: _entityType,isAllowed: true}));
+        entityAllowed[_Firmadd] = true;
+         entityExists[_Firmadd] = true;
+         entityTypes[_Firmadd] = _entityType;
+    }
+
+    function allowEntity(address _Firmadd) public {
+        require(msg.sender == owner, "Only owner can allow entities");
+        entityAllowed[_Firmadd] = true;
+        updateEntityAllowedStatus(_Firmadd, true);
+    }
+
+    function disallowEntity(address _Firmadd) public {
+        require(msg.sender == owner, "Only owner can disallow entities");
+        entityAllowed[_Firmadd] = false;
+        updateEntityAllowedStatus(_Firmadd, false);
+    }
+
+    function getEntity() public view returns (Entity[] memory) {
+        uint256 allowedCount = 0;
+        for (uint256 i = 0; i < entities.length; i++) {
+            if (entityAllowed[entities[i].Firmadd]) {
+                allowedCount++;
+            }
+        }
+
+        Entity[] memory allowedEntities = new Entity[](allowedCount);
+        uint256 index = 0;
+        for (uint256 i = 0; i < entities.length; i++) {
+            if (entityAllowed[entities[i].Firmadd]) {
+                allowedEntities[index] = entities[i];
+                index++;
+            }
+        }
+
+        return allowedEntities;
+    }
+
+    function updateEntityAllowedStatus(address _Firmadd, bool _isAllowed) private {
+        for (uint256 i = 0; i < entities.length; i++) {
+            if (entities[i].Firmadd == _Firmadd) {
+                entities[i].isAllowed = _isAllowed;
+                break;
+            }
+        }
+    }
+    // product creation
+      struct Product {
+        uint id;
+        string name;
+        address currentOwner;
+        string variety;
+        uint quantity;
+        string dateofharvest;
+    }
+
+    Product[] public products;
+    function setProduct(string memory _name, address _currentOwner,string memory _variety, uint _quantity, string memory _date) public {
+         require(entityTypes[_currentOwner] == EntityType.Farmer, "Only farmers can create products");
+      
+        products.push(Product(_id, _name, _currentOwner, _variety, _quantity, _date));
+
+        _id++;
+    }
+    function getProduct() public view returns(Product[] memory){
+        return products;
+    } 
+
+    // product movement
+    enum productOwnerStatus{HandoverToLogistics}
+    enum logisticsStatus{HavingProduct,Delivered,Return}
+    enum CustomerStatus{Received,Returned,Cancelled}
+    
+
+
+}

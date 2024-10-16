@@ -1,11 +1,10 @@
- // SPDX-License-Identifier: MIT
-
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.8.2 <0.9.0;
-// Entity creation
+
 contract EntityContract {
     enum EntityType { Farmer, Wholesaler, Logistics, Retailer, Customer }
     address public owner;
-     uint private _id;
+    uint private _id;
     
     struct Entity {
         address Firmadd;
@@ -17,23 +16,56 @@ contract EntityContract {
         EntityType entityType;
         bool isAllowed;
     }
-
+    
+    struct Product {
+        uint id;
+        string variety;
+        address currentOwner;
+        uint price;
+        uint quantity;
+        string dateofharvest;
+         address creator;
+    }
+    
+    Product[] public products;
     Entity[] public entities;
- mapping(address => bool) private entityExists;
+    mapping(address => bool) private entityExists;
     mapping(address => bool) private entityAllowed;
- mapping(address => EntityType) private entityTypes;
+    mapping(address => bool) private isFarmer;
+mapping(uint => mapping(address => uint)) public portionOwners;
     constructor() {
+        _id = 1;
         owner = msg.sender;
-         _id = 1;
     }
 
-    function setEntity(address _Firmadd,string memory _Firmname,string memory _Firmlocation,string memory _ownerName,string memory _ownerContact,string memory _city,EntityType _entityType) public {
+    function setEntity(
+        address _Firmadd,
+        string memory _Firmname,
+        string memory _Firmlocation,
+        string memory _ownerName,
+        string memory _ownerContact,
+        string memory _city,
+        EntityType _entityType
+    ) public {
         require(msg.sender == owner, "Only owner can create entities");
-         require(!entityExists[_Firmadd], "Entity is already exists");
-        entities.push(Entity({Firmadd: _Firmadd,Firmname: _Firmname,Firmlocation: _Firmlocation,ownerName: _ownerName,ownerContact: _ownerContact,city: _city,entityType: _entityType,isAllowed: true}));
+        require(!entityExists[_Firmadd], "Entity already exists");
+
+        entities.push(Entity({
+            Firmadd: _Firmadd,
+            Firmname: _Firmname,
+            Firmlocation: _Firmlocation,
+            ownerName: _ownerName,
+            ownerContact: _ownerContact,
+            city: _city,
+            entityType: _entityType,
+            isAllowed: true
+        }));
+
         entityAllowed[_Firmadd] = true;
-         entityExists[_Firmadd] = true;
-         entityTypes[_Firmadd] = _entityType;
+        entityExists[_Firmadd] = true;
+        if (_entityType == EntityType.Farmer) {
+            isFarmer[_Firmadd] = true;
+        }
     }
 
     function allowEntity(address _Firmadd) public {
@@ -46,6 +78,9 @@ contract EntityContract {
         require(msg.sender == owner, "Only owner can disallow entities");
         entityAllowed[_Firmadd] = false;
         updateEntityAllowedStatus(_Firmadd, false);
+        if (isFarmer[_Firmadd]) {
+            isFarmer[_Firmadd] = false;
+        }
     }
 
     function getEntity() public view returns (Entity[] memory) {
@@ -76,33 +111,171 @@ contract EntityContract {
             }
         }
     }
-    // product creation
-      struct Product {
-        uint id;
-        string name;
-        address currentOwner;
-        string variety;
-        uint quantity;
-        string dateofharvest;
-    }
 
-    Product[] public products;
-    function setProduct(string memory _name, address _currentOwner,string memory _variety, uint _quantity, string memory _date) public {
-         require(entityTypes[_currentOwner] == EntityType.Farmer, "Only farmers can create products");
-      
-        products.push(Product(_id, _name, _currentOwner, _variety, _quantity, _date));
+    function productCreation(
+        string memory _variety,
+        uint _price,
+        uint _quantity,
+        string memory _date
+    ) public {
+        require(isFarmer[msg.sender], "Address is not a registered farmer. Only a registered farmer can create this product");
+        require(entityAllowed[msg.sender], "Entity is not allowed to create products");
+        
+        Product memory newProduct = Product({
+            id: _id,
+            variety: _variety,
+            currentOwner: msg.sender,
+            price: _price,
+            quantity: _quantity,
+            dateofharvest: _date,
+            creator: msg.sender
+        });
 
+        products.push(newProduct);
         _id++;
     }
-    function getProduct() public view returns(Product[] memory){
-        return products;
-    } 
+    struct PurchaseRecord {
+    address buyer;
+    uint weight;
+    uint timestamp; 
+}
+mapping(uint => PurchaseRecord[])  purchaseRecords;
 
-    // product movement
-    enum productOwnerStatus{HandoverToLogistics}
-    enum logisticsStatus{HavingProduct,Delivered,Return}
-    enum CustomerStatus{Received,Returned,Cancelled}
-    
+function directPurchase(uint _productId, uint _weight) payable public {
+    Product storage product = products[_productId];
+    uint bill = product.price * _weight;
+     require(entityAllowed[msg.sender], "Entity is not allowed to create products");
+    require(product.quantity != 0, "Product out of stock");
+    require(_weight <= product.quantity, "Insufficient product quantity");
+    require(msg.value >= bill, "Insufficient Ether sent");
+    payable(product.currentOwner).transfer(bill);
+    product.quantity -= _weight;
+    portionOwners[_productId][msg.sender] += _weight;
+    PurchaseRecord memory newPurchase = PurchaseRecord({
+        buyer: msg.sender,
+        weight: _weight,
+        timestamp: block.timestamp
+    });
+    purchaseRecords[_productId].push(newPurchase);
+}
 
+function getPurchaseRecords(uint _productId) public view returns (PurchaseRecord[] memory) {
+    return purchaseRecords[_productId];
+}
+struct Delivery {
+    address logistics;
+    uint quantity;
+    address customer;
+    uint fair;
+    uint totalBill;
+    uint productId;
+}
+enum status {
+    accept,
+    reject,
+    cancel,
+    received
+}
+mapping(address => Delivery) public deliveries;
+
+
+    function delivery(uint _productId, address _logistics, uint _quantity, address _customer, uint _fair) public {
+         require(portionOwners[_productId][msg.sender] >= _quantity, "Insufficient portion ownership");
+         require(entityAllowed[msg.sender], "please regiter yourself");
+         require(entityAllowed[_logistics], "logistic not register");
+         require(entityAllowed[_customer], "customer not register");
+        require(_quantity > 0, "Quantity must be greater than zero");
+        require(_productId < products.length, "Invalid product ID");
+        
+        Product storage product = products[_productId];
+        require(product.quantity >= _quantity, "Insufficient product quantity");
+
+        uint totalBill = product.price * _quantity + _fair;
+
+        deliveries[_customer] = Delivery({
+            logistics: _logistics,
+            quantity: _quantity,
+            customer: _customer,
+            fair: _fair,
+            totalBill: totalBill,
+             productId: _productId
+        });
+    }
+    function acceptDelivery() public payable {
+        require(entityAllowed[msg.sender], "please regiter yourself");
+        Delivery storage currentdelivery = deliveries[msg.sender];
+        require(currentdelivery.customer != address(0), "No pending delivery");
+        require(msg.value >= currentdelivery.totalBill, "Insufficient payment");
+
+        // emit StatusUpdate(msg.sender, Status.Received);
+    }
+
+ function cancelDelivery() public {
+    require(entityAllowed[msg.sender], "please regiter yourself");
+        Delivery storage currentdelivery = deliveries[msg.sender];
+        require(currentdelivery.customer != address(0), "No pending delivery");
+
+        payable(currentdelivery.logistics).transfer(currentdelivery.fair);
+        uint remainingMoney = currentdelivery.totalBill - currentdelivery.fair;
+        payable(msg.sender).transfer(remainingMoney);
+
+        delete deliveries[msg.sender];
+        // emit StatusUpdate(msg.sender, Status.Cancel);
+    }
+
+function receiveDelivery() public {
+    require(entityAllowed[msg.sender], "Please register yourself");
+    Delivery storage currentDelivery = deliveries[msg.sender];
+    require(currentDelivery.customer != address(0), "No pending delivery");
+    payable(currentDelivery.customer).transfer(currentDelivery.totalBill - currentDelivery.fair);
+    payable(currentDelivery.logistics).transfer(currentDelivery.fair);
+    Product storage product = products[currentDelivery.productId]; 
+    product.quantity -= currentDelivery.quantity;
+    portionOwners[currentDelivery.productId][msg.sender] -= currentDelivery.quantity;
+   delete deliveries[msg.sender];
+}
+function updateProductPrice(uint _productId, uint _newPrice) public {
+    Product storage product = products[_productId];
+    require(msg.sender == product.currentOwner, "Only the current owner can update the price");
+    require(_newPrice > 0, "Price must be greater than zero");
+
+    product.price = _newPrice;
+}
+struct ProductInfo {
+    uint id;
+    string variety;
+    address currentOwner;
+    uint price;
+    uint quantity;
+    string dateofharvest;
+    address creator;
+    uint totalQuantityOwned;
+}
+
+function getProductQuantities() public view returns (ProductInfo[] memory) {
+    ProductInfo[] memory productInfos = new ProductInfo[](entities.length * products.length);
+
+    uint index = 0;
+    for (uint i = 0; i < entities.length; i++) {
+        for (uint j = 0; j < products.length; j++) {
+            if (portionOwners[j][entities[i].Firmadd] > 0) {
+                ProductInfo memory productInfo;
+                productInfo.id = products[j].id;
+                productInfo.variety = products[j].variety;
+                productInfo.currentOwner = products[j].currentOwner;
+                productInfo.price = products[j].price;
+                productInfo.quantity = products[j].quantity;
+                productInfo.dateofharvest = products[j].dateofharvest;
+                productInfo.creator = products[j].creator;
+                productInfo.totalQuantityOwned = portionOwners[j][entities[i].Firmadd];
+
+                productInfos[index] = productInfo;
+                index++;
+            }
+        }
+    }
+
+    return productInfos;
+}
 
 }

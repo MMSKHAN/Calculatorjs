@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.2 <0.9.0;
-
-contract EntityContract {
+pragma solidity >=0.4.22 <0.9.0;
+contract SuplyChain {
     enum EntityType { Farmer, Wholesaler, Logistics, Retailer, Customer }
     address public owner;
     uint private _id;
@@ -20,7 +19,7 @@ contract EntityContract {
     struct Product {
         uint id;
         string variety;
-        address currentOwner;
+        // address currentOwner;
         uint price;
         uint quantity;
         string dateofharvest;
@@ -34,7 +33,7 @@ contract EntityContract {
     mapping(address => bool) private isFarmer;
 mapping(uint => mapping(address => uint)) public portionOwners;
     constructor() {
-        _id = 1;
+        _id = 0;
         owner = msg.sender;
     }
 
@@ -83,25 +82,10 @@ mapping(uint => mapping(address => uint)) public portionOwners;
         }
     }
 
-    function getEntity() public view returns (Entity[] memory) {
-        uint256 allowedCount = 0;
-        for (uint256 i = 0; i < entities.length; i++) {
-            if (entityAllowed[entities[i].Firmadd]) {
-                allowedCount++;
-            }
-        }
+ function getEntity() public view returns (Entity[] memory) {
+    return entities; // Return all entities
+}
 
-        Entity[] memory allowedEntities = new Entity[](allowedCount);
-        uint256 index = 0;
-        for (uint256 i = 0; i < entities.length; i++) {
-            if (entityAllowed[entities[i].Firmadd]) {
-                allowedEntities[index] = entities[i];
-                index++;
-            }
-        }
-
-        return allowedEntities;
-    }
 
     function updateEntityAllowedStatus(address _Firmadd, bool _isAllowed) private {
         for (uint256 i = 0; i < entities.length; i++) {
@@ -124,13 +108,13 @@ mapping(uint => mapping(address => uint)) public portionOwners;
         Product memory newProduct = Product({
             id: _id,
             variety: _variety,
-            currentOwner: msg.sender,
+            // currentOwner: msg.sender,
             price: _price,
             quantity: _quantity,
             dateofharvest: _date,
             creator: msg.sender
         });
-
+       portionOwners[_id][msg.sender] = _quantity;
         products.push(newProduct);
         _id++;
     }
@@ -139,16 +123,24 @@ mapping(uint => mapping(address => uint)) public portionOwners;
     uint weight;
     uint timestamp; 
 }
-mapping(uint => PurchaseRecord[])  purchaseRecords;
 
+function getProducts() public view returns (Product[] memory) {
+    return products;
+}
+mapping(uint => PurchaseRecord[])  purchaseRecords;
+event PurchaseMade(address indexed buyer, uint indexed productId, uint weight);
+ receive() external payable {}
 function directPurchase(uint _productId, uint _weight) payable public {
     Product storage product = products[_productId];
-    uint bill = product.price * _weight;
-     require(entityAllowed[msg.sender], "Entity is not allowed to create products");
+    // uint bill = product.price * _weight;
+    require(entityAllowed[msg.sender], "Entity is not allowed to create products");
     require(product.quantity != 0, "Product out of stock");
     require(_weight <= product.quantity, "Insufficient product quantity");
-    require(msg.value >= bill, "Insufficient Ether sent");
-    payable(product.currentOwner).transfer(bill);
+    // require(msg.value == bill, "Incorrect amount of Ether sent");
+//   payable(address(uint160(product.currentOwner))).transfer(msg.value);
+ (bool success, ) = payable(product.creator).call{value: msg.value}("");
+    require(success, "Ether transfer failed");
+
     product.quantity -= _weight;
     portionOwners[_productId][msg.sender] += _weight;
     PurchaseRecord memory newPurchase = PurchaseRecord({
@@ -158,7 +150,6 @@ function directPurchase(uint _productId, uint _weight) payable public {
     });
     purchaseRecords[_productId].push(newPurchase);
 }
-
 function getPurchaseRecords(uint _productId) public view returns (PurchaseRecord[] memory) {
     return purchaseRecords[_productId];
 }
@@ -209,6 +200,17 @@ mapping(address => Delivery) public deliveries;
 
         // emit StatusUpdate(msg.sender, Status.Received);
     }
+    
+    function rejectDelivery() public {
+    require(entityAllowed[msg.sender], "Please register yourself");
+    Delivery storage currentDelivery = deliveries[msg.sender];
+    require(currentDelivery.customer != address(0), "No pending delivery");
+
+    // Logic to handle rejection, e.g., notify logistics, etc.
+    
+    delete deliveries[msg.sender]; // Clear the delivery record on rejection
+}
+
 
  function cancelDelivery() public {
     require(entityAllowed[msg.sender], "please regiter yourself");
@@ -236,46 +238,45 @@ function receiveDelivery() public {
 }
 function updateProductPrice(uint _productId, uint _newPrice) public {
     Product storage product = products[_productId];
-    require(msg.sender == product.currentOwner, "Only the current owner can update the price");
+    require(msg.sender == product.creator, "Only the current owner can update the price");
     require(_newPrice > 0, "Price must be greater than zero");
 
     product.price = _newPrice;
 }
-struct ProductInfo {
-    uint id;
-    string variety;
-    address currentOwner;
-    uint price;
-    uint quantity;
-    string dateofharvest;
-    address creator;
-    uint totalQuantityOwned;
-}
+function getAllOwnership() public view returns (uint[] memory productIds, address[][] memory owners, uint[][] memory quantities) {
+    productIds = new uint[](products.length);
+    owners = new address[][](products.length);
+    quantities = new uint[][](products.length);
+    
+    for (uint i = 0; i < products.length; i++) {
+        productIds[i] = products[i].id;
+        uint ownerCount = 0;
 
-function getProductQuantities() public view returns (ProductInfo[] memory) {
-    ProductInfo[] memory productInfos = new ProductInfo[](entities.length * products.length);
+        // First pass: count owners
+        for (uint j = 0; j < entities.length; j++) {
+            if (portionOwners[productIds[i]][entities[j].Firmadd] > 0) {
+                ownerCount++;
+            }
+        }
 
-    uint index = 0;
-    for (uint i = 0; i < entities.length; i++) {
-        for (uint j = 0; j < products.length; j++) {
-            if (portionOwners[j][entities[i].Firmadd] > 0) {
-                ProductInfo memory productInfo;
-                productInfo.id = products[j].id;
-                productInfo.variety = products[j].variety;
-                productInfo.currentOwner = products[j].currentOwner;
-                productInfo.price = products[j].price;
-                productInfo.quantity = products[j].quantity;
-                productInfo.dateofharvest = products[j].dateofharvest;
-                productInfo.creator = products[j].creator;
-                productInfo.totalQuantityOwned = portionOwners[j][entities[i].Firmadd];
+        // Initialize arrays for owners and quantities
+        owners[i] = new address[](ownerCount);
+        quantities[i] = new uint[](ownerCount);
+        uint index = 0;
 
-                productInfos[index] = productInfo;
+        // Second pass: fill the owners and quantities
+        for (uint j = 0; j < entities.length; j++) {
+            uint quantity = portionOwners[productIds[i]][entities[j].Firmadd];
+            if (quantity > 0) {
+                owners[i][index] = entities[j].Firmadd;
+                quantities[i][index] = quantity;
                 index++;
             }
         }
     }
 
-    return productInfos;
+    return (productIds, owners, quantities);
 }
+
 
 }
